@@ -1,0 +1,44 @@
+# .NET / Blazor
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code / Rider
+.vscode/
+.history/
+.idea/
+*.sln.iml
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.cache
+
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+**/secrets.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tests and output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+publish/
+artifacts/
