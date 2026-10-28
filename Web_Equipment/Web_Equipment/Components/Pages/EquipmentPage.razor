@@ -1,0 +1,76 @@
+﻿@page "/equipos"
+
+@using Web_Equipment.Models
+@using Web_Equipment.Services
+
+@inject EquipmentApiService EquipmentService
+
+<h3>Listado de Equipamientos</h3>
+
+@if (cargando)
+{
+    <p>Cargando equipamientos...</p>
+}
+else if (error != null)
+{
+    <p>@error</p>
+}
+else if (equipos.Count == 0)
+{
+    <p>No hay equipamientos registrados.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Código</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var equipo in equipos)
+            {
+                <tr>
+                    <td>@equipo.Id</td>
+                    <td>@equipo.Name</td>
+                    <td>@equipo.Code</td>
+                    <td>@equipo.Location</td>
+                    <td>@equipo.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Equipment> equipos = new();
+
+    private bool cargando = true;
+
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            equipos = await EquipmentService.GetAllAsync();
+        }
+        catch (HttpRequestException)
+        {
+            error = "No se pudo consultar la API.";
+        }
+        catch (Exception)
+        {
+            error = "Ocurrió un error al cargar los equipos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+}
