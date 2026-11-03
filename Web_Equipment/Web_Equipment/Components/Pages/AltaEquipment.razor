@@ -1,0 +1,124 @@
+﻿@page "/equipos/nuevo"
+@rendermode InteractiveServer
+
+@using Web_Equipment.Models
+@using Web_Equipment.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject EquipmentApiService EquipmentService
+@inject NavigationManager Navigation
+
+<h3>Nuevo equipamiento</h3>
+
+<EditForm Model="@equipo" OnValidSubmit="Guardar" FormName="altaEquipo">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Nombre</label>
+        <InputText class="form-control" @bind-Value="equipo.Name" />            
+    </div>
+
+    <div class="mb-3">
+        <label>Código</label>
+        <InputText class="form-control" @bind-Value="equipo.Code" />
+    </div>
+
+    <div class="mb-3">
+        <label>Ubicación</label>
+        <InputText class="form-control" @bind-Value="equipo.Location" />    
+    </div>
+
+    <div class="mb-3">
+        <label>Estado</label>
+        <InputSelect class="form-select" @bind-Value="equipo.Status">
+
+            <option value="Operativo">
+                Operativo
+            </option>
+
+            <option value="En mantenimiento">
+                En mantenimiento
+            </option>
+
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label>Imagen (opcional)</label>
+        <InputFile OnChange="SeleccionarImagen"
+                   accept=".jpg,.jpeg,.png,.webp" />
+    </div>
+
+    <button type="submit"
+            class="btn btn-success"
+            disabled="@guardando">
+
+        @(guardando ? "Guardando..." : "Guardar equipamiento")
+
+    </button>
+
+</EditForm>
+
+@if (mensaje != null)
+{
+    <p class="mt-3 text-danger">@mensaje</p>
+}
+
+@code {
+    private Equipment equipo = new();
+
+    private IBrowserFile? imagen;
+
+    private string? mensaje;
+
+    private bool guardando = false;
+
+
+
+    private void SeleccionarImagen(InputFileChangeEventArgs e)
+    {
+        imagen = e.File;
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+
+        guardando = true;
+        mensaje = null;
+
+        string? idCreado = null;
+
+        try
+        {
+            var nuevo = await EquipmentService.PostEquipment(equipo);
+
+            idCreado = nuevo.Id;
+
+            if (imagen != null)
+            {
+                await EquipmentService.UploadImageAsync(
+                    nuevo.Id, imagen);
+            }
+
+            Navigation.NavigateTo("/equipos");
+        }
+        catch (Exception)
+        {
+            if (idCreado != null)
+            {
+                mensaje = $"Se creó el equipo {idCreado}, " +
+                          "pero no se pudo subir su imagen.";
+            }
+            else
+            {
+                mensaje = "Error al crear el equipamiento.";
+            }
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+}

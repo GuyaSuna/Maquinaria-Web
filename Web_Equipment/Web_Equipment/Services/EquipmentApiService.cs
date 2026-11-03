@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Json;
 using Web_Equipment.Models;
 
 namespace Web_Equipment.Services
@@ -19,5 +20,66 @@ namespace Web_Equipment.Services
                 
             return equipos ?? new List<Equipment>();
         }
+
+        public async Task<Equipment?> GetByIdAsync(string id)
+        {
+            var equipo = await _http.GetFromJsonAsync<Equipment>
+                ($"api/equipment/{id}");
+            return equipo;
+        }
+
+
+        public async Task<Equipment> PostEquipment(Equipment eq)
+        {
+            var response = await _http.PostAsJsonAsync(
+                "api/equipment", eq);
+
+            response.EnsureSuccessStatusCode();
+
+            var equipoCreado = await response.Content
+                .ReadFromJsonAsync<Equipment>();
+
+            return equipoCreado ?? throw new Exception("No se pudo obtener el equipo.");
+        }
+
+
+        public async Task UpdateEquipment (string id,Equipment eq)
+        {
+            var response = await _http.PutAsJsonAsync($"api/equipment/{id}", eq);
+            response.EnsureSuccessStatusCode();
+        }
+
+
+        public async Task DeleteAsync(string id)
+        {
+         var response = await _http.DeleteAsync($"api/equipment/{id}");
+         response.EnsureSuccessStatusCode();
+        }
+
+
+        public async Task UploadImageAsync(
+            string id,
+            IBrowserFile imagen)
+        {
+            using var formulario = new MultipartFormDataContent();
+
+            using var stream = imagen.OpenReadStream(
+                maxAllowedSize: 5 * 1024 * 1024);
+
+            using var contenido = new StreamContent(stream);
+
+            contenido.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue(imagen.ContentType);
+                  
+
+            formulario.Add(contenido, "file", imagen.Name);
+
+            var response = await _http.PostAsync(
+                $"api/equipment/{id}/imagen",
+                formulario);
+
+            response.EnsureSuccessStatusCode();
+        }
+
     }
 }

@@ -7,6 +7,10 @@
 
 <h3>Listado de Equipamientos</h3>
 
+<a href="/equipos/nuevo" class="btn btn-primary mb-3">
+    Nuevo equipamiento
+</a>
+
 @if (cargando)
 {
     <p>Cargando equipamientos...</p>
@@ -24,6 +28,7 @@ else
     <table class="table">
         <thead>
             <tr>
+                <th>Imagen</th>
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Código</th>
@@ -36,6 +41,19 @@ else
             @foreach (var equipo in equipos)
             {
                 <tr>
+                    <td>
+                        @if (!string.IsNullOrEmpty(equipo.ImageUrl))
+                        {
+                            <img src="@equipo.ImageUrl"
+                                 alt="@equipo.Name"
+                                 width="100" />
+                        }
+                        else
+                        {
+                            <span>Sin imagen</span>
+                        }
+                    </td>
+
                     <td>@equipo.Id</td>
                     <td>@equipo.Name</td>
                     <td>@equipo.Code</td>
