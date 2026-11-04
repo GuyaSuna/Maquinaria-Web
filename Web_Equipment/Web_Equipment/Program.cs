@@ -12,6 +12,11 @@ builder.Services.AddHttpClient<EquipmentApiService>(client =>
     client.BaseAddress = new Uri("https://localhost:7016/");
 });
 
+builder.Services.AddHttpClient<PagoApiService>(client =>
+{
+    client.BaseAddress =
+        new Uri("https://localhost:7016/");
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,0 +1,61 @@
+﻿
+@page "/pago"
+@rendermode InteractiveServer
+
+@using Web_Equipment.Services
+@inject PagoApiService PagoService
+@inject NavigationManager Navigation
+
+<h3>Pago de revisión de equipamiento</h3>
+
+<div class="card p-4" style="max-width: 450px;">
+
+    <h5>Bomba centrífuga 01</h5>
+
+    <p>Equipamiento: eq-1</p>
+
+    <p>Servicio: Revisión de maquinaria</p>
+
+    <h4>Precio: $850 UYU</h4>
+
+    <button class="btn btn-primary"
+            @onclick="Pagar"
+            disabled="@procesando">
+
+        @(procesando ? "Procesando..." : "Pagar con Mercado Pago")
+
+    </button>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="text-danger mt-3">@error</p>
+    }
+
+</div>
+
+@code {
+
+    private bool procesando = false;
+    private string error = "";
+
+    private async Task Pagar()
+    {
+        procesando = true;
+        error = "";
+
+        try
+        {
+            string url = await PagoService.CrearPagoAsync("eq-1");
+
+            Navigation.NavigateTo(url, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            error = "No se pudo iniciar el pago: " + ex.Message;
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+}
