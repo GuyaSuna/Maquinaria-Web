@@ -1,61 +1,169 @@
-﻿
-@page "/pago"
+﻿@page "/equipos/{EquipmentId}/pago"
 @rendermode InteractiveServer
 
+@using Web_Equipment.Models
 @using Web_Equipment.Services
+
 @inject PagoApiService PagoService
 @inject NavigationManager Navigation
 
 <h3>Pago de revisión de equipamiento</h3>
 
-<div class="card p-4" style="max-width: 450px;">
+<p>Equipamiento: @EquipmentId</p>
 
-    <h5>Bomba centrífuga 01</h5>
+@if (cargando)
+{
+    <p>Cargando pagos...</p>
+}
+else
+{
+    <div class="card p-3 mb-3">
 
-    <p>Equipamiento: eq-1</p>
+        <h5>Revisión técnica</h5>
 
-    <p>Servicio: Revisión de maquinaria</p>
+        <p>Importe: $850 UYU</p>
 
-    <h4>Precio: $850 UYU</h4>
+        <button class="btn btn-primary"
+                disabled="@procesando"
+                @onclick="IniciarPago">
 
-    <button class="btn btn-primary"
-            @onclick="Pagar"
-            disabled="@procesando">
+            @(procesando ? "Procesando..." : "Pagar con Mercado Pago")
 
-        @(procesando ? "Procesando..." : "Pagar con Mercado Pago")
+        </button>
+    </div>
 
-    </button>
+    <h4>Historial de pagos</h4>
 
-    @if (!string.IsNullOrEmpty(error))
+    @if (pagos.Count == 0)
     {
-        <p class="text-danger mt-3">@error</p>
+        <p>No existen pagos registrados.</p>
     }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Importe</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
 
-</div>
+            <tbody>
+                @foreach (var pago in pagos)
+                {
+                    <tr>
+                        <td>@pago.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>$@pago.Monto</td>
+
+                        <td>
+                            <span class="@ObtenerClaseEstado(pago.Estado)">
+                                @pago.Estado
+                            </span>
+                        </td>
+
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm"
+                                    disabled="@procesando"
+                                    @onclick="() => ConsultarEstado(pago.Id)">
+                                Consultar estado
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <p class="mt-3">@mensaje</p>
+}
 
 @code {
+    [Parameter]
+    public string EquipmentId { get; set; } = "";
 
+    private List<PagoRevision> pagos = new();
+
+    private bool cargando = true;
     private bool procesando = false;
-    private string error = "";
+    private string mensaje = "";
 
-    private async Task Pagar()
+    protected override async Task OnParametersSetAsync()
     {
-        procesando = true;
-        error = "";
+        cargando = true;
 
         try
         {
-            string url = await PagoService.CrearPagoAsync("eq-1");
+            pagos = await PagoService.ObtenerPagosAsync(EquipmentId);
+            mensaje = "";
+        }
+        catch (Exception)
+        {
+            pagos = new();
+            mensaje = "No se pudieron cargar los pagos.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task IniciarPago()
+    {
+        procesando = true;
+        mensaje = "";
+
+        try
+        {
+            var url = await PagoService.CrearPagoAsync(EquipmentId);
 
             Navigation.NavigateTo(url, forceLoad: true);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            error = "No se pudo iniciar el pago: " + ex.Message;
+            mensaje = "No se pudo iniciar el pago.";
         }
         finally
         {
             procesando = false;
         }
+    }
+
+    private async Task ConsultarEstado(int pagoId)
+    {
+        procesando = true;
+        mensaje = "";
+
+        try
+        {
+            await PagoService.ActualizarEstadoAsync(pagoId);
+
+            pagos = await PagoService.ObtenerPagosAsync(EquipmentId);
+
+            mensaje = "Estado consultado correctamente.";
+        }
+        catch (Exception)
+        {
+            mensaje = "No se pudo consultar el estado del pago.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private string ObtenerClaseEstado(string estado)
+    {
+        return estado.ToUpper() switch
+        {
+            "PAGADO" => "badge bg-success",
+            "RECHAZADO" => "badge bg-danger",
+            "PENDIENTE" => "badge bg-warning text-dark",
+            _ => "badge bg-secondary"
+        };
     }
 }

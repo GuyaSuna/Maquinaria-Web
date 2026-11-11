@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 using System.Net.Http.Json;
+using Web_Equipment.DTO_s;
 using Web_Equipment.Models;
 
 namespace Web_Equipment.Services
@@ -80,6 +81,46 @@ namespace Web_Equipment.Services
 
             response.EnsureSuccessStatusCode();
         }
+
+
+        public async Task<PaginaResultadoDto> BuscarAsync(
+            string? nombre,
+            string? estado,
+            string? ubicacion,
+            int pagina,
+            int tamano)
+        {
+            var parametros = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                parametros.Add(
+                    $"nombre={Uri.EscapeDataString(nombre)}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(estado))
+            {
+                parametros.Add(
+                    $"estado={Uri.EscapeDataString(estado)}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(ubicacion))
+            {
+                parametros.Add(
+                    $"ubicacion={Uri.EscapeDataString(ubicacion)}");
+            }
+
+            parametros.Add($"pagina={pagina}");
+            parametros.Add($"tamano={tamano}");
+
+            string queryString = string.Join("&", parametros);
+
+            var resultado = await _http.GetFromJsonAsync<PaginaResultadoDto>(
+                $"api/equipment/buscar?{queryString}");
+
+            return resultado ?? new PaginaResultadoDto();
+        }
+
 
     }
 }

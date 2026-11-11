@@ -15,7 +15,7 @@ public class PagoApiService
 
     public async Task<string> CrearPagoAsync(string equipmentId)
     {
-        var response = await _http.PostAsync(
+        using var response = await _http.PostAsync(
             $"api/pagos/crear/{equipmentId}",
             null
         );
@@ -33,5 +33,34 @@ public class PagoApiService
         }
 
         return pago.Url;
+    }
+
+
+    public async Task<List<PagoRevision>> ObtenerPagosAsync(
+        string equipmentId)
+    {
+        var pagos = await _http
+            .GetFromJsonAsync<List<PagoRevision>>(
+                $"api/pagos/equipment/{equipmentId}"
+            );
+
+        return pagos ?? new List<PagoRevision>();
+    }
+
+    public async Task<PagoRevision> ActualizarEstadoAsync(
+        int pagoId)
+    {
+        using var response = await _http.PostAsync(
+            $"api/pagos/{pagoId}/actualizar-estado",
+            null
+        );
+
+        response.EnsureSuccessStatusCode();
+
+        var pago = await response.Content.ReadFromJsonAsync<PagoRevision>();
+            
+        return pago ?? throw new Exception(
+            "La api no devolvió el estado actualizado."
+        );
     }
 }

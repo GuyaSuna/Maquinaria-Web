@@ -1,9 +1,12 @@
 ﻿@page "/equipos"
+@rendermode InteractiveServer
 
+@using Web_Equipment.DTO_s
 @using Web_Equipment.Models
 @using Web_Equipment.Services
 
 @inject EquipmentApiService EquipmentService
+@inject NavigationManager Navigation
 
 <h3>Listado de Equipamientos</h3>
 
@@ -11,72 +14,214 @@
     Nuevo equipamiento
 </a>
 
+<div class="card p-3 mb-3">
+
+    <div class="row g-3">
+
+        <div class="col-md-4">
+            <label class="form-label">Nombre</label>
+
+            <input class="form-control"
+                   placeholder="Buscar por nombre"
+                   @bind="nombre" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Estado</label>
+
+            <select class="form-select" @bind="estado">
+                <option value="">Todos</option>
+                <option value="Operativo">Operativo</option>
+                <option value="En mantenimiento">
+                    En mantenimiento
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Ubicación</label>
+
+            <input class="form-control"
+                   placeholder="Buscar por ubicación"
+                   @bind="ubicacion" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">
+                Equipos por página
+            </label>
+
+            <select class="form-select" @bind="tamano">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-primary w-100"
+                    @onclick="Buscar"
+                    disabled="@cargando">
+                Buscar
+            </button>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100"
+                    @onclick="LimpiarFiltros"
+                    disabled="@cargando">
+                Limpiar filtros
+            </button>
+        </div>
+
+    </div>
+</div>
+
 @if (cargando)
 {
     <p>Cargando equipamientos...</p>
 }
 else if (error != null)
 {
-    <p>@error</p>
-}
-else if (equipos.Count == 0)
-{
-    <p>No hay equipamientos registrados.</p>
+    <div class="alert alert-danger">
+        @error
+    </div>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Imagen</th>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Código</th>
-                <th>Ubicación</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
+    <p>
+        <strong>Equipamientos encontrados:</strong>
+        @resultado.Total
+    </p>
 
-        <tbody>
-            @foreach (var equipo in equipos)
-            {
+    @if (resultado.Items.Count == 0)
+    {
+        <p>No se encontraron equipamientos.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>
-                        @if (!string.IsNullOrEmpty(equipo.ImageUrl))
-                        {
-                            <img src="@equipo.ImageUrl"
-                                 alt="@equipo.Name"
-                                 width="100" />
-                        }
-                        else
-                        {
-                            <span>Sin imagen</span>
-                        }
-                    </td>
-
-                    <td>@equipo.Id</td>
-                    <td>@equipo.Name</td>
-                    <td>@equipo.Code</td>
-                    <td>@equipo.Location</td>
-                    <td>@equipo.Status</td>
+                    <th>Imagen</th>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Código</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+
+            <tbody>
+                @foreach (var equipo in resultado.Items)
+                {
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(equipo.ImageUrl))
+                            {
+                                <img src="@equipo.ImageUrl"
+                                     alt="@equipo.Name"
+                                     width="100" />
+                            }
+                            else
+                            {
+                                <span>Sin imagen</span>
+                            }
+                        </td>
+
+                        <td>@equipo.Id</td>
+                        <td>@equipo.Name</td>
+                        <td>@equipo.Code</td>
+                        <td>@equipo.Location</td>
+                        <td>@equipo.Status</td>
+
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                    @onclick="() => IrAPago(equipo.Id)">
+                                Pagar revisión
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <div class="d-flex justify-content-between
+        align-items-center mt-3">
+
+        <button class="btn btn-outline-primary"
+                disabled="@(pagina <= 1)"
+                @onclick="Anterior">
+
+            Anterior
+        </button>
+
+        <span>
+            Página @pagina de @resultado.TotalPaginas
+        </span>
+
+        <button class="btn btn-outline-primary"
+                disabled="@(pagina >= resultado.TotalPaginas)"
+                @onclick="Siguiente">
+
+            Siguiente
+        </button>
+
+    </div>
 }
 
 @code {
-    private List<Equipment> equipos = new();
+
+    private string nombre = "";
+    private string estado = "";
+    private string ubicacion = "";
+
+    private int pagina = 1;
+    private int tamano = 5;
+
+    private PaginaResultadoDto resultado = new();
 
     private bool cargando = true;
-
     private string? error;
 
     protected override async Task OnInitializedAsync()
     {
+        await CargarEquipos();
+    }
+
+    private async Task Buscar()
+    {
+        pagina = 1;
+
+        await CargarEquipos();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        nombre = "";
+        estado = "";
+        ubicacion = "";
+        pagina = 1;
+
+        await CargarEquipos();
+    }
+
+    private async Task CargarEquipos()
+    {
+        cargando = true;
+        error = null;
+
         try
         {
-            equipos = await EquipmentService.GetAllAsync();
+            resultado = await EquipmentService.BuscarAsync(
+                nombre,
+                estado,
+                ubicacion,
+                pagina,
+                tamano
+            );
         }
         catch (HttpRequestException)
         {
@@ -90,5 +235,31 @@ else
         {
             cargando = false;
         }
+    }
+
+    private async Task Anterior()
+    {
+        if (pagina > 1)
+        {
+            pagina--;
+
+            await CargarEquipos();
+        }
+    }
+
+    private async Task Siguiente()
+    {
+        if (pagina < resultado.TotalPaginas)
+        {
+            pagina++;
+
+            await CargarEquipos();
+        }
+    }
+
+    private void IrAPago(string equipmentId)
+    {
+        Navigation.NavigateTo($"/equipos/{equipmentId}/pago");
+            
     }
 }
