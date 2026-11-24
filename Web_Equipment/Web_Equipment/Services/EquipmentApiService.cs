@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Web_Equipment.DTO_s;
 using Web_Equipment.Models;
+using static System.Net.WebRequestMethods;
 
 namespace Web_Equipment.Services
 {
@@ -173,14 +174,14 @@ namespace Web_Equipment.Services
             if (!string.IsNullOrWhiteSpace(nombre))
             {
                 parametros.Add(
-                    $"nombre={Uri.EscapeDataString(nombre)}"
+                    $"nombre={nombre}"
                 );
             }
 
             if (!string.IsNullOrWhiteSpace(estado))
             {
                 parametros.Add(
-                    $"estado={Uri.EscapeDataString(estado)}"
+                    $"estado={estado}"
                 );
             }
 
@@ -212,3 +213,44 @@ namespace Web_Equipment.Services
         }
     }
 }
+
+
+//Version a estudiar para el parcial
+
+//public async Task<PaginaResultadoDto> BuscarAsync(
+//          string? nombre,
+//          string? estado,
+//          string? ubicacion,
+//          int pagina,
+//          int tamano)
+//{
+//    var parametros = new List<string>();
+
+//    if (!string.IsNullOrWhiteSpace(nombre))
+//    {
+//        parametros.Add(
+//            $"nombre={Uri.EscapeDataString(nombre)}");
+//    }
+
+//    if (!string.IsNullOrWhiteSpace(estado))
+//    {
+//        parametros.Add(
+//            $"estado={Uri.EscapeDataString(estado)}");
+//    }
+
+//    if (!string.IsNullOrWhiteSpace(ubicacion))
+//    {
+//        parametros.Add(
+//            $"ubicacion={Uri.EscapeDataString(ubicacion)}");
+//    }
+
+//    parametros.Add($"pagina={pagina}");
+//    parametros.Add($"tamano={tamano}");
+
+//    string queryString = string.Join("&", parametros);
+
+//    var resultado = await _http.GetFromJsonAsync<PaginaResultadoDto>(
+//        $"api/equipment/buscar?{queryString}");
+
+//    return resultado ?? new PaginaResultadoDto();
+//}
