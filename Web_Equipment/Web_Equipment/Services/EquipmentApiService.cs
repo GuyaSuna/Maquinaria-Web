@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Forms;
+﻿
+using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Web_Equipment.DTO_s;
 using Web_Equipment.Models;
@@ -8,53 +10,119 @@ namespace Web_Equipment.Services
     public class EquipmentApiService
     {
         private readonly HttpClient _http;
+        private readonly AuthSession _session;
 
-        public EquipmentApiService(HttpClient http)
+        public EquipmentApiService(
+            HttpClient http,
+            AuthSession session)
         {
             _http = http;
+            _session = session;
+        }
+
+        private HttpRequestMessage CrearPeticion(
+            HttpMethod metodo,
+            string url)
+        {
+            if (!_session.EstaAutenticado)
+            {
+                throw new UnauthorizedAccessException(
+                    "Tenes que iniciar sesión.");
+            }
+
+            var request = new HttpRequestMessage(
+                metodo,
+                url
+            );
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    _session.Token
+                );
+
+            return request;
         }
 
         public async Task<List<Equipment>> GetAllAsync()
         {
-            var equipos = await _http.GetFromJsonAsync<List<Equipment>>
-                ("api/equipment");
-                
+            using var request = CrearPeticion(
+                HttpMethod.Get,
+                "api/equipment"
+            );
+
+            using var response = await _http.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
+
+            var equipos = await response.Content
+                .ReadFromJsonAsync<List<Equipment>>();
+
             return equipos ?? new List<Equipment>();
         }
 
         public async Task<Equipment?> GetByIdAsync(string id)
         {
-            var equipo = await _http.GetFromJsonAsync<Equipment>
-                ($"api/equipment/{id}");
-            return equipo;
-        }
+            using var request = CrearPeticion(
+                HttpMethod.Get,
+                $"api/equipment/{id}"
+            );
 
+            using var response = await _http.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content
+                .ReadFromJsonAsync<Equipment>();
+        }
 
         public async Task<Equipment> PostEquipment(Equipment eq)
         {
-            var response = await _http.PostAsJsonAsync(
-                "api/equipment", eq);
+            using var request = CrearPeticion(
+                HttpMethod.Post,
+                "api/equipment"
+            );
+
+            request.Content = JsonContent.Create(eq);
+
+            using var response = await _http.SendAsync(request);
 
             response.EnsureSuccessStatusCode();
 
             var equipoCreado = await response.Content
                 .ReadFromJsonAsync<Equipment>();
 
-            return equipoCreado ?? throw new Exception("No se pudo obtener el equipo.");
+            return equipoCreado
+                ?? throw new Exception(
+                    "No se pudo obtener el equipo.");
         }
 
-
-        public async Task UpdateEquipment (string id,Equipment eq)
+        public async Task UpdateEquipment(
+            string id,
+            Equipment eq)
         {
-            var response = await _http.PutAsJsonAsync($"api/equipment/{id}", eq);
+            using var request = CrearPeticion(
+                HttpMethod.Put,
+                $"api/equipment/{id}"
+            );
+
+            request.Content = JsonContent.Create(eq);
+
+            using var response = await _http.SendAsync(request);
+
             response.EnsureSuccessStatusCode();
         }
 
-
         public async Task DeleteAsync(string id)
         {
-         var response = await _http.DeleteAsync($"api/equipment/{id}");
-         response.EnsureSuccessStatusCode();
+            using var request = CrearPeticion(
+                HttpMethod.Delete,
+                $"api/equipment/{id}"
+            );
+
+            using var response = await _http.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
         }
 
 
@@ -62,26 +130,36 @@ namespace Web_Equipment.Services
             string id,
             IBrowserFile imagen)
         {
+            using var request = CrearPeticion(
+                HttpMethod.Post,
+                $"api/equipment/{id}/imagen"
+            );
+
             using var formulario = new MultipartFormDataContent();
 
             using var stream = imagen.OpenReadStream(
-                maxAllowedSize: 5 * 1024 * 1024);
+                maxAllowedSize: 5 * 1024 * 1024
+            );
 
             using var contenido = new StreamContent(stream);
 
             contenido.Headers.ContentType =
-                new System.Net.Http.Headers.MediaTypeHeaderValue(imagen.ContentType);
-                  
+                new MediaTypeHeaderValue(
+                    imagen.ContentType
+                );
 
-            formulario.Add(contenido, "file", imagen.Name);
+            formulario.Add(
+                contenido,
+                "file",
+                imagen.Name
+            );
 
-            var response = await _http.PostAsync(
-                $"api/equipment/{id}/imagen",
-                formulario);
+            request.Content = formulario;
+
+            using var response = await _http.SendAsync(request);
 
             response.EnsureSuccessStatusCode();
         }
-
 
         public async Task<PaginaResultadoDto> BuscarAsync(
             string? nombre,
@@ -95,19 +173,22 @@ namespace Web_Equipment.Services
             if (!string.IsNullOrWhiteSpace(nombre))
             {
                 parametros.Add(
-                    $"nombre={Uri.EscapeDataString(nombre)}");
+                    $"nombre={Uri.EscapeDataString(nombre)}"
+                );
             }
 
             if (!string.IsNullOrWhiteSpace(estado))
             {
                 parametros.Add(
-                    $"estado={Uri.EscapeDataString(estado)}");
+                    $"estado={Uri.EscapeDataString(estado)}"
+                );
             }
 
             if (!string.IsNullOrWhiteSpace(ubicacion))
             {
                 parametros.Add(
-                    $"ubicacion={Uri.EscapeDataString(ubicacion)}");
+                    $"ubicacion={Uri.EscapeDataString(ubicacion)}"
+                );
             }
 
             parametros.Add($"pagina={pagina}");
@@ -115,12 +196,19 @@ namespace Web_Equipment.Services
 
             string queryString = string.Join("&", parametros);
 
-            var resultado = await _http.GetFromJsonAsync<PaginaResultadoDto>(
-                $"api/equipment/buscar?{queryString}");
+            using var request = CrearPeticion(
+                HttpMethod.Get,
+                $"api/equipment/buscar?{queryString}"
+            );
+
+            using var response = await _http.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
+
+            var resultado = await response.Content
+                .ReadFromJsonAsync<PaginaResultadoDto>();
 
             return resultado ?? new PaginaResultadoDto();
         }
-
-
     }
 }
